@@ -60,11 +60,25 @@ namespace TraceryNet
         /// <summary>
         /// Load the rules list by deserializing the source as a json object.
         /// </summary>
-        /// <param name="source"></param>
-        public Grammar(string source)
+        /// <param name="sources"></param>
+        public Grammar(params string[] sources)
         {
             // Populate the rules list
-            PopulateRules(source);
+            foreach (var source in sources)
+            {
+                if (Rules == null)
+                {
+                    PopulateRules(source);
+                }
+                else
+                {
+                    var rules = GetRules(source);
+                    foreach (var property in rules.Properties())
+                    {
+                        Rules[property.Name] = property.Value;
+                    }
+                }
+            }
 
             // Set up the function table
             ModifierLookup = new Dictionary<string, Func<string, string>>
@@ -82,7 +96,7 @@ namespace TraceryNet
             // Initialize the save storage
             SaveData = new Dictionary<string, string>();
         }
-
+        
         /// <summary>
         /// Deserialize the source string from either json or yaml and populate the rules
         /// object.
@@ -90,11 +104,16 @@ namespace TraceryNet
         /// <param name="source"></param>
         private void PopulateRules(string source)
         {
+            Rules = GetRules(source);
+        }
+
+        private static JObject GetRules(string source)
+        {
             // Is it valid json?
             if (InputValidators.IsValidJson(source))
             {
                 // Deserialize directly
-                Rules = JsonConvert.DeserializeObject<dynamic>(source);
+                return JsonConvert.DeserializeObject<dynamic>(source);
             }
             // Is it valid yaml?
             else if (InputValidators.IsValidYaml(source))
@@ -105,7 +124,7 @@ namespace TraceryNet
 
                 // Reserialize the yaml as json into the Rules object
                 var rules = JsonConvert.SerializeObject(yamlObject);
-                Rules = JsonConvert.DeserializeObject<dynamic>(rules);
+                return JsonConvert.DeserializeObject<dynamic>(rules);
             }
             else
             {
